@@ -14,7 +14,7 @@ MySQLdb.converters module.
 """
 
 __revision__ = """$Revision$"""[11:-2]
-from release import __version__, version_info, __author__
+from .release import __version__, version_info, __author__
 
 import _mysql
 
@@ -77,7 +77,7 @@ def Binary(x):
 
 def Connect(*args, **kwargs):
     """Factory function for connections.Connection."""
-    from connections import Connection
+    from .connections import Connection
     return Connection(*args, **kwargs)
 
 connect = Connection = Connect

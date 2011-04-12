@@ -202,4 +202,4 @@ class test_MySQLdb(dbapi20.DatabaseAPI20Test):
     
 if __name__ == '__main__':
     unittest.main()
-    print '''"Huh-huh, he said 'unit'." -- Butthead'''
+    print ('''"Huh-huh, he said 'unit'." -- Butthead''')

@@ -41,8 +41,7 @@ class test_MySQLdb(capabilities.DatabaseTest):
         db = self.connection
         c = self.cursor
         self.create_table(('pos INT', 'tree CHAR(20)'))
-        c.executemany("INSERT INTO %s (pos,tree) VALUES (%%s,%%s)" % self.table,
-                      list(enumerate('ash birch cedar larch pine'.split())))
+        c.executemany("INSERT INTO %s (pos,tree) VALUES ({!s},{!s})" % self.table, list(enumerate('ash birch cedar larch pine'.split())) )
         db.commit()
         
         c.execute("""
@@ -77,9 +76,9 @@ class test_MySQLdb(capabilities.DatabaseTest):
         from MySQLdb.constants import ER
         try:
             self.cursor.execute("describe some_non_existent_table");
-        except self.connection.ProgrammingError, msg:
-            self.failUnless(msg[0] == ER.NO_SUCH_TABLE)
-    
+        except self.connection.ProgrammingError as msg:
+            self.assertTrue(msg.code == ER.NO_SUCH_TABLE)
+        
     def test_ping(self):
         self.connection.ping()
         
@@ -90,4 +89,4 @@ if __name__ == '__main__':
         gc.enable()
         gc.set_debug(gc.DEBUG_LEAK)
     unittest.main()
-    print '''"Huh-huh, he said 'unit'." -- Butthead'''
+    print ('''"Huh-huh, he said 'unit'." -- Butthead''')

@@ -1,4 +1,4 @@
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 def get_metadata_and_options():
     config = SafeConfigParser()
@@ -7,8 +7,8 @@ def get_metadata_and_options():
     metadata = dict(config.items('metadata'))
     options = dict(config.items('options'))
 
-    metadata['py_modules'] = filter(None, metadata['py_modules'].split('\n'))
-    metadata['classifiers'] = filter(None, metadata['classifiers'].split('\n'))
+    metadata['py_modules'] = list(filter(None, metadata['py_modules'].split('\n')))
+    metadata['classifiers'] = list(filter(None, metadata['classifiers'].split('\n')))
 
     return metadata, options
 
@@ -30,3 +30,4 @@ version_info = %(version_info)s
 __version__ = "%(version)s"
 """ % metadata)
     rel.close()
+

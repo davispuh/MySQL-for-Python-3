@@ -1,11 +1,11 @@
 def get_config():
-    import os, sys, _winreg
+    import os, sys, winreg
     from setup_common import get_metadata_and_options, enabled, create_release_file
 
     metadata, options = get_metadata_and_options()
 
-    serverKey = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, options['registry_key'])
-    mysql_root, dummy = _winreg.QueryValueEx(serverKey,'Location')
+    serverKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, options['registry_key'])
+    mysql_root, dummy = winreg.QueryValueEx(serverKey,options['location'])
 
     extra_objects = []
     static = enabled(options, 'static')
@@ -43,5 +43,5 @@ def get_config():
     return metadata, ext_options
 
 if __name__ == "__main__":
-    print """You shouldn't be running this directly; it is used by setup.py."""
+    print ("""You shouldn't be running this directly; it is used by setup.py.""")
     

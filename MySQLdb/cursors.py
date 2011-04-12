@@ -7,7 +7,6 @@ default, MySQLdb uses the Cursor class.
 
 import re
 import sys
-from types import ListType, TupleType, UnicodeType
 
 
 restr = (r"\svalues\s*"
@@ -153,13 +152,24 @@ class BaseCursor(object):
         del self.messages[:]
         db = self._get_db()
         charset = db.character_set_name()
-        if isinstance(query, unicode):
-            query = query.encode(charset)
+
         if args is not None:
-            query = query % db.literal(args)
+            if isinstance(query, bytes):
+                query = query.decode();
+
+            if isinstance(args, dict):
+                query = query.format( **db.literal(args) )
+            elif isinstance(args, tuple) or isinstance(args, list):
+                query = query.format( *db.literal(args) )
+            else:
+                query = query.format( db.literal(args) )
+
+        if isinstance(query, str):
+            query = query.encode(charset);
+
         try:
             r = self._query(query)
-        except TypeError, m:
+        except TypeError as m:
             if m.args[0] in ("not enough arguments for format string",
                              "not all arguments converted"):
                 self.messages.append((ProgrammingError, m.args[0]))
@@ -197,8 +207,6 @@ class BaseCursor(object):
         del self.messages[:]
         db = self._get_db()
         if not args: return
-        charset = db.character_set_name()
-        if isinstance(query, unicode): query = query.encode(charset)
         m = insert_values.search(query)
         if not m:
             r = 0
@@ -209,8 +217,16 @@ class BaseCursor(object):
         e = m.end(1)
         qv = m.group(1)
         try:
-            q = [ qv % db.literal(a) for a in args ]
-        except TypeError, msg:
+            q = []
+            for a in args:
+                if isinstance(a, dict):
+                    data = qv.format(**db.literal(a))
+                elif isinstance(a, tuple) or isinstance(a, list):
+                    data = qv.format( *db.literal(a) )
+                else:
+                    data = qv.format( db.literal(a) )
+                q.append( data )
+        except TypeError as msg:
             if msg.args[0] in ("not enough arguments for format string",
                                "not all arguments converted"):
                 self.errorhandler(self, ProgrammingError, msg.args[0])
@@ -220,7 +236,7 @@ class BaseCursor(object):
             exc, value, tb = sys.exc_info()
             del tb
             self.errorhandler(self, exc, value)
-        r = self._query('\n'.join([query[:p], ',\n'.join(q), query[e:]]))
+        r = self._query('\n'.join([query[:p], ',\n'.join(q), query[e:]]));
         if not self._defer_warnings: self._warning_check()
         return r
     
@@ -257,17 +273,15 @@ class BaseCursor(object):
         db = self._get_db()
         charset = db.character_set_name()
         for index, arg in enumerate(args):
-            q = "SET @_%s_%d=%s" % (procname, index,
-                                         db.literal(arg))
-            if isinstance(q, unicode):
+            q = "SET @_{!s}_{:d}={!s}".format(procname, index, db.literal(arg))
+            if isinstance(q, str):
                 q = q.encode(charset)
             self._query(q)
             self.nextset()
             
-        q = "CALL %s(%s)" % (procname,
-                             ','.join(['@_%s_%d' % (procname, i)
+        q = "CALL {!s}({!s})".format(procname, ','.join(['@_{!s}_{:d}'.format(procname, i)
                                        for i in range(len(args))]))
-        if type(q) is UnicodeType:
+        if type(q) is str:
             q = q.encode(charset)
         self._query(q)
         self._executed = q
@@ -276,7 +290,7 @@ class BaseCursor(object):
     
     def _do_query(self, q):
         db = self._get_db()
-        self._last_executed = q
+        self._last_executed = q;
         db.query(q)
         self._do_get_result()
         return self.rowcount
@@ -363,7 +377,7 @@ class CursorStoreResultMixIn(object):
             r = value
         else:
             self.errorhandler(self, ProgrammingError,
-                              "unknown scroll mode %s" % `mode`)
+                              "unknown scroll mode %s" % mode)
         if r < 0 or r >= len(self._rows):
             self.errorhandler(self, IndexError, "out of range")
         self.rownumber = r
