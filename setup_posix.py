@@ -1,4 +1,4 @@
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 # This dequote() business is required for some older versions
 # of mysql_config
@@ -98,5 +98,5 @@ def get_config():
     return metadata, ext_options
 
 if __name__ == "__main__":
-    print """You shouldn't be running this directly; it is used by setup.py."""
+    print ("""You shouldn't be running this directly; it is used by setup.py.""")
 

@@ -6,7 +6,7 @@ want to make your own subclasses. In most cases, you will probably
 override Connection.default_cursor with a non-standard Cursor class.
 
 """
-import cursors
+import MySQLdb.cursors
 from _mysql_exceptions import Warning, Error, InterfaceError, DataError, \
      DatabaseError, OperationalError, IntegrityError, InternalError, \
      NotSupportedError, ProgrammingError
@@ -33,7 +33,7 @@ def defaulterrorhandler(connection, cursor, errorclass, errorvalue):
         connection.messages.append(error)
     del cursor
     del connection
-    raise errorclass, errorvalue
+    raise errorclass(errorvalue)
 
 re_numeric_part = re.compile(r"^(\d+)")
 
@@ -57,7 +57,7 @@ class Connection(_mysql.connection):
 
     """MySQL Database Connection Object"""
 
-    default_cursor = cursors.Cursor
+    default_cursor = MySQLdb.cursors.Cursor
     
     def __init__(self, *args, **kwargs):
         """
@@ -109,17 +109,9 @@ class Connection(_mysql.connection):
         cursorclass
           class object, used to create cursors (keyword only)
 
-        use_unicode
-          If True, text-like columns are returned as unicode objects
-          using the connection's character set.  Otherwise, text-like
-          columns are returned as strings.  columns are returned as
-          normal strings. Unicode objects will always be encoded to
-          the connection's character set regardless of this setting.
-
         charset
           If supplied, the connection character set will be changed
-          to this character set (MySQL-4.1 and newer). This implies
-          use_unicode=True.
+          to this character set (MySQL-4.1 and newer).
 
         sql_mode
           If supplied, the session SQL mode will be changed to this
@@ -143,15 +135,15 @@ class Connection(_mysql.connection):
         documentation for the MySQL C API for some hints on what they do.
 
         """
-        from constants import CLIENT, FIELD_TYPE
-        from converters import conversions
+        from .constants import CLIENT, FIELD_TYPE
+        from .converters import conversions
         from weakref import proxy, WeakValueDictionary
         
         import types
 
         kwargs2 = kwargs.copy()
         
-        if kwargs.has_key('conv'):
+        if 'conv' in kwargs:
             conv = kwargs['conv']
         else:
             conv = conversions
@@ -165,14 +157,8 @@ class Connection(_mysql.connection):
         kwargs2['conv'] = conv2
 
         self.cursorclass = kwargs2.pop('cursorclass', self.default_cursor)
-        charset = kwargs2.pop('charset', '')
+        charset = kwargs2.pop('charset', 'utf8')
 
-        if charset:
-            use_unicode = True
-        else:
-            use_unicode = False
-            
-        use_unicode = kwargs2.pop('use_unicode', use_unicode)
         sql_mode = kwargs2.pop('sql_mode', '')
 
         client_flag = kwargs.get('client_flag', 0)
@@ -197,19 +183,13 @@ class Connection(_mysql.connection):
                 return db.string_literal(obj)
             return string_literal
 
-        def _get_unicode_literal():
-            def unicode_literal(u, dummy=None):
-                return db.literal(u.encode(unicode_literal.charset))
-            return unicode_literal
-
-        def _get_string_decoder():
-            def string_decoder(s):
-                return s.decode(string_decoder.charset)
-            return string_decoder
-        
+        def _get_bytes_literal():
+            def bytes_literal(u, dummy=None):
+                return db.literal(u.decode(bytes_literal.charset))
+            return bytes_literal
+       
         string_literal = _get_string_literal()
-        self.unicode_literal = unicode_literal = _get_unicode_literal()
-        self.string_decoder = string_decoder = _get_string_decoder()
+        self.bytes_literal = bytes_literal = _get_bytes_literal()
         if not charset:
             charset = self.character_set_name()
         self.set_character_set(charset)
@@ -217,14 +197,9 @@ class Connection(_mysql.connection):
         if sql_mode:
             self.set_sql_mode(sql_mode)
 
-        if use_unicode:
-            self.converter[FIELD_TYPE.STRING].append((None, string_decoder))
-            self.converter[FIELD_TYPE.VAR_STRING].append((None, string_decoder))
-            self.converter[FIELD_TYPE.VARCHAR].append((None, string_decoder))
-            self.converter[FIELD_TYPE.BLOB].append((None, string_decoder))
-
-        self.encoders[types.StringType] = string_literal
-        self.encoders[types.UnicodeType] = unicode_literal
+        self.encoders[str] = string_literal
+        self.encoders[bytes] = bytes_literal
+        
         self._transactional = self.server_capabilities & CLIENT.TRANSACTIONS
         if self._transactional:
             # PEP-249 requires autocommit to be initially off
@@ -295,17 +270,16 @@ class Connection(_mysql.connection):
             except AttributeError:
                 if self._server_version < (4, 1):
                     raise NotSupportedError("server is too old to set charset")
-                self.query('SET NAMES %s' % charset)
+                self.query('SET NAMES {!s}'.format(charset))
                 self.store_result()
-        self.string_decoder.charset = charset
-        self.unicode_literal.charset = charset
+        self.bytes_literal.charset = charset
 
     def set_sql_mode(self, sql_mode):
         """Set the connection sql_mode. See MySQL documentation for
         legal values."""
         if self._server_version < (4, 1):
             raise NotSupportedError("server is too old to set sql_mode")
-        self.query("SET SESSION sql_mode='%s'" % sql_mode)
+        self.query("SET SESSION sql_mode='{!s}'".format(sql_mode))
         self.store_result()
         
     def show_warnings(self):

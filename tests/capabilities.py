@@ -25,7 +25,7 @@ class DatabaseTest(unittest.TestCase):
         self.connection = db
         self.cursor = db.cursor()
         self.BLOBText = ''.join([chr(i) for i in range(256)] * 100);
-        self.BLOBUText = u''.join([unichr(i) for i in range(16384)])
+        self.BLOBUText = ''.join([chr(i) for i in range(16384)])
         self.BLOBBinary = self.db_module.Binary(''.join([chr(i) for i in range(256)] * 16))
 
     leak_test = True
@@ -35,11 +35,11 @@ class DatabaseTest(unittest.TestCase):
             import gc
             del self.cursor
             orphans = gc.collect()
-            self.failIf(orphans, "%d orphaned objects found after deleting cursor" % orphans)
+            self.assertFalse(orphans, "%d orphaned objects found after deleting cursor" % orphans)
             
             del self.connection
             orphans = gc.collect()
-            self.failIf(orphans, "%d orphaned objects found after deleting connection" % orphans)
+            self.assertFalse(orphans, "%d orphaned objects found after deleting connection" % orphans)
             
     def table_exists(self, name):
         try:
@@ -81,18 +81,18 @@ class DatabaseTest(unittest.TestCase):
         self.create_table(columndefs)
         insert_statement = ('INSERT INTO %s VALUES (%s)' % 
                             (self.table,
-                             ','.join(['%s'] * len(columndefs))))
+                             ','.join(['{!s}'] * len(columndefs))))
         data = [ [ generator(i,j) for j in range(len(columndefs)) ]
                  for i in range(self.rows) ]
         if self.debug:
-            print data
+            print(data)
         self.cursor.executemany(insert_statement, data)
         self.connection.commit()
         # verify
         self.cursor.execute('select * from %s' % self.table)
         l = self.cursor.fetchall()
         if self.debug:
-            print l
+            print(l)
         self.assertEquals(len(l), self.rows)
         try:
             for i in range(self.rows):
@@ -110,7 +110,7 @@ class DatabaseTest(unittest.TestCase):
         self.create_table(columndefs)
         insert_statement = ('INSERT INTO %s VALUES (%s)' % 
                             (self.table,
-                             ','.join(['%s'] * len(columndefs))))
+                             ','.join(['{!s}'] * len(columndefs))))
         data = [ [ generator(i,j) for j in range(len(columndefs)) ]
                  for i in range(self.rows) ]
         self.cursor.executemany(insert_statement, data)
@@ -122,33 +122,33 @@ class DatabaseTest(unittest.TestCase):
         for i in range(self.rows):
             for j in range(len(columndefs)):
                 self.assertEquals(l[i][j], generator(i,j))
-        delete_statement = 'delete from %s where col1=%%s' % self.table
+        delete_statement = 'delete from %s where col1={!s}' % self.table
         self.cursor.execute(delete_statement, (0,))
         self.cursor.execute('select col1 from %s where col1=%s' % \
                             (self.table, 0))
         l = self.cursor.fetchall()
-        self.failIf(l, "DELETE didn't work")
+        self.assertFalse(l, "DELETE didn't work")
         self.connection.rollback()
         self.cursor.execute('select col1 from %s where col1=%s' % \
                             (self.table, 0))
         l = self.cursor.fetchall()
-        self.failUnless(len(l) == 1, "ROLLBACK didn't work")
+        self.assertTrue(len(l) == 1, "ROLLBACK didn't work")
         self.cursor.execute('drop table %s' % (self.table))
 
     def test_truncation(self):
         columndefs = ( 'col1 INT', 'col2 VARCHAR(255)')
         def generator(row, col):
             if col == 0: return row
-            else: return ('%i' % (row%10))*((255-self.rows/2)+row)
+            else: return ('{:d}'.format(row%10))*(round(255-self.rows/2)+row)
         self.create_table(columndefs)
         insert_statement = ('INSERT INTO %s VALUES (%s)' % 
                             (self.table,
-                             ','.join(['%s'] * len(columndefs))))
+                             ','.join(['{!s}'] * len(columndefs))))
 
         try:
             self.cursor.execute(insert_statement, (0, '0'*256))
         except Warning:
-            if self.debug: print self.cursor.messages
+            if self.debug: print(self.cursor.messages)
         except self.connection.DataError:
             pass
         else:
@@ -163,7 +163,7 @@ class DatabaseTest(unittest.TestCase):
                     data.append(generator(i,j))
                 self.cursor.execute(insert_statement,tuple(data))
         except Warning:
-            if self.debug: print self.cursor.messages
+            if self.debug: print(self.cursor.messages)
         except self.connection.DataError:
             pass
         else:
@@ -176,7 +176,7 @@ class DatabaseTest(unittest.TestCase):
                      for i in range(self.rows) ]
             self.cursor.executemany(insert_statement, data)
         except Warning:
-            if self.debug: print self.cursor.messages
+            if self.debug: print(self.cursor.messages)
         except self.connection.DataError:
             pass
         else:
