@@ -15,7 +15,7 @@ def get_config():
     else:
         client = "mysqlclient"
 
-    library_dirs = [ os.path.join(mysql_root, r'lib\opt') ]
+    library_dirs = [ os.path.join(mysql_root, r'lib') ]
     libraries = [ 'kernel32', 'advapi32', 'wsock32', client ]
     include_dirs = [ os.path.join(mysql_root, r'include') ]
     extra_compile_args = [ '/Zl' ]

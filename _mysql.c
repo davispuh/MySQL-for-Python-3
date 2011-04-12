@@ -31,10 +31,8 @@ PERFORMANCE OF THIS SOFTWARE.
 #if defined(MS_WINDOWS)
 #include <winsock2.h>
 #include <windows.h>
-#include <config-win.h>
-#else
-#include "my_config.h"
 #endif
+#include "my_config.h"
 #include "mysql.h"
 #include "mysqld_error.h"
 #include "errmsg.h"
@@ -2741,10 +2739,10 @@ PyMODINIT_FUNC PyInit__mysql(void)
 	_mysql_ResultObject_Type.ob_base.ob_base.ob_type = &PyType_Type;
 	_mysql_ConnectionObject_Type.tp_alloc = PyType_GenericAlloc;
 	_mysql_ConnectionObject_Type.tp_new = PyType_GenericNew;
-	_mysql_ConnectionObject_Type.tp_free = _PyObject_GC_Del; 
+	_mysql_ConnectionObject_Type.tp_free = PyObject_GC_Del; 
 	_mysql_ResultObject_Type.tp_alloc = PyType_GenericAlloc;
 	_mysql_ResultObject_Type.tp_new = PyType_GenericNew;
-	_mysql_ResultObject_Type.tp_free = _PyObject_GC_Del;
+	_mysql_ResultObject_Type.tp_free = PyObject_GC_Del;
 
 	if (PyType_Ready(&_mysql_ConnectionObject_Type) < 0) return NULL;
 	if (PyType_Ready(&_mysql_ResultObject_Type) < 0) return NULL;
