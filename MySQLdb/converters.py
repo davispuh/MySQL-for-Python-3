@@ -64,7 +64,7 @@ def Bytes2Str(s, d):
 Long2Int = Thing2Str
 
 def Float2Str(o, d):
-    return '%.15g'.format(o)
+    return '{:f}'.format(o)
 
 def None2NULL(o, d):
     """Convert None to NULL."""
