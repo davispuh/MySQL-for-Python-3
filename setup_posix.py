@@ -9,19 +9,19 @@ def dequote(s):
     return s
 
 def compiler_flag(f):
-    return "-%s" % f
+    return "-{}".format(f);
 
 def mysql_config(what):
     from os import popen
 
-    f = popen("%s --%s" % (mysql_config.path, what))
+    f = popen("{} --{}".format(mysql_config.path, what))
     data = f.read().strip().split()
     ret = f.close()
     if ret:
         if ret/256:
             data = []
         if ret/256 > 1:
-            raise EnvironmentError("%s not found" % (mysql_config.path,))
+            raise EnvironmentError("{} not found".format(mysql_config.path))
     return data
 mysql_config.path = "mysql_config"
 
@@ -72,7 +72,7 @@ def get_config():
 
     if static:
         extra_objects.append(os.path.join(
-            library_dirs[0],'lib%s.a' % client))
+            library_dirs[0],'lib{}.a'.format(client)))
 
     name = "MySQL-python"
     if enabled(options, 'embedded'):
