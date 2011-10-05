@@ -1242,6 +1242,7 @@ _mysql_field_to_python(PyObject *converter, char *rowitem, unsigned long length,
 				if (converter != Py_None)
 		        {
 					v = PyObject_CallFunction(converter, "O", rowitem_unicode);
+			                Py_XDECREF(rowitem_unicode);
 		        } else
 				{
 					v = rowitem_unicode;
