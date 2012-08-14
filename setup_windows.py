@@ -1,11 +1,10 @@
 def get_config():
-    import os, sys, winreg
+    import os, sys
     from setup_common import get_metadata_and_options, enabled, create_release_file
 
     metadata, options = get_metadata_and_options()
 
-    serverKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, options['registry_key'])
-    mysql_root, dummy = winreg.QueryValueEx(serverKey,options['location'])
+    mysql_root = options['mysql_location']
 
     extra_objects = []
     static = enabled(options, 'static')
