@@ -70,7 +70,7 @@ class BaseCursor(object):
 
     def close(self):
         """Close the cursor. No further queries will be possible."""
-        if not self.connection: return
+        if self.connection is None or not dir(self.connection): return
         while self.nextset(): pass
         self.connection = None
 
@@ -131,7 +131,7 @@ class BaseCursor(object):
         """Does nothing, required by DB API."""
 
     def _get_db(self):
-        if not self.connection:
+        if self.connection is None or not dir(self.connection):
             self.errorhandler(self, ProgrammingError, "cursor closed")
         return self.connection
     
