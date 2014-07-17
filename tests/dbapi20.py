@@ -177,8 +177,8 @@ class DatabaseAPI20Test(unittest.TestCase):
     def test_Exceptions(self):
         # Make sure required exceptions exist, and are in the
         # defined heirarchy.
-        self.assertTrue(issubclass(self.driver.Warning,StandardError))
-        self.assertTrue(issubclass(self.driver.Error,StandardError))
+        self.assertTrue(issubclass(self.driver.Warning,Exception))
+        self.assertTrue(issubclass(self.driver.Error,Exception))
         self.assertTrue(
             issubclass(self.driver.InterfaceError,self.driver.Error)
             )
@@ -382,27 +382,27 @@ class DatabaseAPI20Test(unittest.TestCase):
 
         if self.driver.paramstyle == 'qmark':
             cur.execute(
-                'insert into %sbooze values (?)' % self.table_prefix,
+                'insert into %sbooze values ({!s})' % self.table_prefix,
                 ("Cooper's",)
                 )
         elif self.driver.paramstyle == 'numeric':
             cur.execute(
-                'insert into %sbooze values (:1)' % self.table_prefix,
+                'insert into %sbooze values ({:1})' % self.table_prefix,
                 ("Cooper's",)
                 )
         elif self.driver.paramstyle == 'named':
             cur.execute(
-                'insert into %sbooze values (:beer)' % self.table_prefix, 
+                'insert into %sbooze values ({beer})' % self.table_prefix,
                 {'beer':"Cooper's"}
                 )
         elif self.driver.paramstyle == 'format':
             cur.execute(
-                'insert into %sbooze values (%%s)' % self.table_prefix,
+                'insert into %sbooze values ({!s})' % self.table_prefix,
                 ("Cooper's",)
                 )
         elif self.driver.paramstyle == 'pyformat':
             cur.execute(
-                'insert into %sbooze values (%%(beer)s)' % self.table_prefix,
+                'insert into %sbooze values ({beer})' % self.table_prefix,
                 {'beer':"Cooper's"}
                 )
         else:
@@ -432,27 +432,27 @@ class DatabaseAPI20Test(unittest.TestCase):
             margs = [ {'beer': "Cooper's"}, {'beer': "Boag's"} ]
             if self.driver.paramstyle == 'qmark':
                 cur.executemany(
-                    'insert into %sbooze values (?)' % self.table_prefix,
+                    'insert into %sbooze values ({!s})' % self.table_prefix,
                     largs
                     )
             elif self.driver.paramstyle == 'numeric':
                 cur.executemany(
-                    'insert into %sbooze values (:1)' % self.table_prefix,
+                    'insert into %sbooze values ({:1})' % self.table_prefix,
                     largs
                     )
             elif self.driver.paramstyle == 'named':
                 cur.executemany(
-                    'insert into %sbooze values (:beer)' % self.table_prefix,
+                    'insert into %sbooze values ({beer})' % self.table_prefix,
                     margs
                     )
             elif self.driver.paramstyle == 'format':
                 cur.executemany(
-                    'insert into %sbooze values (%%s)' % self.table_prefix,
+                    'insert into %sbooze values ({!s})' % self.table_prefix,
                     largs
                     )
             elif self.driver.paramstyle == 'pyformat':
                 cur.executemany(
-                    'insert into %sbooze values (%%(beer)s)' % (
+                    'insert into %sbooze values ({beer})' % (
                         self.table_prefix
                         ),
                     margs

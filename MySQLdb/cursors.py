@@ -7,13 +7,6 @@ default, MySQLdb uses the Cursor class.
 
 import re
 import sys
-try:
-    from types import ListType, TupleType, UnicodeType
-except ImportError:
-    # Python 3
-    ListType = list
-    TupleType = tuple
-    UnicodeType = str
 
 restr = r"""
     \s
@@ -96,7 +89,7 @@ class BaseCursor(object):
 
     def close(self):
         """Close the cursor. No further queries will be possible."""
-        if not self.connection: return
+        if self.connection is None or not dir(self.connection): return
         while self.nextset(): pass
         self.connection = None
 
@@ -157,7 +150,7 @@ class BaseCursor(object):
         """Does nothing, required by DB API."""
 
     def _get_db(self):
-        if not self.connection:
+        if self.connection is None or not dir(self.connection):
             self.errorhandler(self, ProgrammingError, "cursor closed")
         return self.connection
     
@@ -177,18 +170,27 @@ class BaseCursor(object):
         """
         del self.messages[:]
         db = self._get_db()
-        if isinstance(query, unicode):
-            query = query.encode(db.unicode_literal.charset)
+
+        charset = db.character_set_name()
+
         if args is not None:
+            if isinstance(query, bytes):
+                query = query.decode();
+
             if isinstance(args, dict):
-                query = query % dict((key, db.literal(item))
-                                     for key, item in args.iteritems())
+                query = query.format( **db.literal(args) )
+            elif isinstance(args, tuple) or isinstance(args, list):
+                query = query.format( *db.literal(args) )
             else:
-                query = query % tuple([db.literal(item) for item in args])
+                query = query.format( db.literal(args) )
+
+        if isinstance(query, str):
+            query = query.encode(charset);
+
         try:
             r = None
             r = self._query(query)
-        except TypeError, m:
+        except TypeError as m:
             if m.args[0] in ("not enough arguments for format string",
                              "not all arguments converted"):
                 self.messages.append((ProgrammingError, m.args[0]))
@@ -228,8 +230,6 @@ class BaseCursor(object):
         del self.messages[:]
         db = self._get_db()
         if not args: return
-        if isinstance(query, unicode):
-            query = query.encode(db.unicode_literal.charset)
         m = insert_values.search(query)
         if not m:
             r = 0
@@ -243,11 +243,13 @@ class BaseCursor(object):
             q = []
             for a in args:
                 if isinstance(a, dict):
-                    q.append(qv % dict((key, db.literal(item))
-                                       for key, item in a.iteritems()))
+                    data = qv.format(**db.literal(a))
+                elif isinstance(a, tuple) or isinstance(a, list):
+                    data = qv.format( *db.literal(a) )
                 else:
-                    q.append(qv % tuple([db.literal(item) for item in a]))
-        except TypeError, msg:
+                    data = qv.format( db.literal(a) )
+                q.append( data )
+        except TypeError as msg:
             if msg.args[0] in ("not enough arguments for format string",
                                "not all arguments converted"):
                 self.errorhandler(self, ProgrammingError, msg.args[0])
@@ -294,19 +296,18 @@ class BaseCursor(object):
         """
 
         db = self._get_db()
+        charset = db.character_set_name()
         for index, arg in enumerate(args):
-            q = "SET @_%s_%d=%s" % (procname, index,
-                                         db.literal(arg))
-            if isinstance(q, unicode):
-                q = q.encode(db.unicode_literal.charset)
+            q = "SET @_{!s}_{:d}={!s}".format(procname, index, db.literal(arg))
+            if isinstance(q, str):
+                q = q.encode(charset)
             self._query(q)
             self.nextset()
             
-        q = "CALL %s(%s)" % (procname,
-                             ','.join(['@_%s_%d' % (procname, i)
+        q = "CALL {!s}({!s})".format(procname, ','.join(['@_{!s}_{:d}'.format(procname, i)
                                        for i in range(len(args))]))
-        if type(q) is UnicodeType:
-            q = q.encode(db.unicode_literal.charset)
+        if type(q) is str:
+            q = q.encode(charset)
         self._query(q)
         self._executed = q
         if not self._defer_warnings: self._warning_check()

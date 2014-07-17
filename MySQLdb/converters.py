@@ -35,23 +35,8 @@ MySQL.connect().
 from _mysql import string_literal, escape_sequence, escape_dict, escape, NULL
 from MySQLdb.constants import FIELD_TYPE, FLAG
 from MySQLdb.times import *
-
-try:
-    from types import IntType, LongType, FloatType, NoneType, TupleType, ListType, DictType, InstanceType, \
-        StringType, UnicodeType, ObjectType, BooleanType, ClassType, TypeType
-except ImportError:
-    # Python 3
-    long = int
-    IntType, LongType, FloatType, NoneType = int, long, float, type(None)
-    TupleType, ListType, DictType, InstanceType = tuple, list, dict, None
-    StringType, UnicodeType, ObjectType, BooleanType = bytes, str, object, bool
-
+import datetime
 import array
-
-try:
-    ArrayType = array.ArrayType
-except AttributeError:
-    ArrayType = array.array
 
 try:
     set
@@ -70,16 +55,16 @@ def Thing2Str(s, d):
     """Convert something into a string via str()."""
     return str(s)
 
-def Unicode2Str(s, d):
-    """Convert a unicode object to a string using the default encoding.
+def Bytes2Str(s, d):
+    """Convert a bytes object to a string using the default encoding.
     This is only used as a placeholder for the real function, which
     is connection-dependent."""
-    return s.encode()
+    return s.decode()
 
 Long2Int = Thing2Str
 
 def Float2Str(o, d):
-    return '%.15g' % o
+    return '{:f}'.format(o)
 
 def None2NULL(o, d):
     """Convert None to NULL."""
@@ -130,33 +115,33 @@ def array2Str(o, d):
     return Thing2Literal(o.tostring(), d)
 
 def quote_tuple(t, d):
-    return "(%s)" % (','.join(escape_sequence(t, d)))
+    return escape_sequence(t, d)
 
 conversions = {
-    IntType: Thing2Str,
-    LongType: Long2Int,
-    FloatType: Float2Str,
-    NoneType: None2NULL,
-    TupleType: quote_tuple,
-    ListType: quote_tuple,
-    DictType: escape_dict,
-    InstanceType: Instance2Str,
-    ArrayType: array2Str,
-    StringType: Thing2Literal, # default
-    UnicodeType: Unicode2Str,
-    ObjectType: Instance2Str,
-    BooleanType: Bool2Str,
-    DateTimeType: DateTime2literal,
-    DateTimeDeltaType: DateTimeDelta2literal,
+    int: Long2Int,
+    float: Float2Str,
+    type(None): None2NULL,
+    tuple: quote_tuple,
+    list: quote_tuple,
+    dict: escape_dict,
+    object: Instance2Str,
+    array.ArrayType: array2Str,
+    str: Thing2Literal, # default
+    bytes: Bytes2Str,
+    bool: Bool2Str,
+    datetime.date: DateTime2literal,
+    datetime.time: DateTime2literal,
+    datetime.datetime: DateTime2literal,
+    datetime.timedelta: DateTimeDelta2literal,
     set: Set2Str,
     FIELD_TYPE.TINY: int,
     FIELD_TYPE.SHORT: int,
-    FIELD_TYPE.LONG: long,
+    FIELD_TYPE.LONG: int,
     FIELD_TYPE.FLOAT: float,
     FIELD_TYPE.DOUBLE: float,
     FIELD_TYPE.DECIMAL: float,
     FIELD_TYPE.NEWDECIMAL: float,
-    FIELD_TYPE.LONGLONG: long,
+    FIELD_TYPE.LONGLONG: int,
     FIELD_TYPE.INT24: int,
     FIELD_TYPE.YEAR: int,
     FIELD_TYPE.SET: Str2Set,

@@ -46,7 +46,7 @@ class CoreAPI(unittest.TestCase):
     """Test _mysql interaction internals."""
 
     def setUp(self):
-        self.conn = connection_factory(use_unicode=True)
+        self.conn = connection_factory()
 
     def tearDown(self):
         self.conn.close()

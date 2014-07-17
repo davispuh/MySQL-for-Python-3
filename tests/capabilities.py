@@ -3,7 +3,7 @@
     for functionality and memory leaks.
 
     Adapted from a script by M-A Lemburg.
-    
+
 """
 from time import time
 import array
@@ -19,30 +19,30 @@ class DatabaseTest(unittest.TestCase):
     create_table_extra = ''
     rows = 10
     debug = False
-    
+
     def setUp(self):
         import gc
         db = connection_factory(**self.connect_kwargs)
         self.connection = db
         self.cursor = db.cursor()
         # TODO: this needs to be re-evaluated for Python 3
-        self.BLOBText = ''.join([chr(i) for i in range(256)] * 100);
-        self.BLOBUText = u''.join([unichr(i) for i in range(16384)])
+        self.BLOBText = ''.join([chr(i) for i in range(256)] * 100)
+        self.BLOBUText = ''.join([chr(i) for i in range(16384)])
         self.BLOBBinary = self.db_module.Binary(''.join([chr(i) for i in range(256)] * 16))
 
     leak_test = True
-    
+
     def tearDown(self):
         if self.leak_test:
             import gc
             del self.cursor
             orphans = gc.collect()
-            self.failIf(orphans, "%d orphaned objects found after deleting cursor" % orphans)
-            
+            self.assertFalse(orphans, "%d orphaned objects found after deleting cursor" % orphans)
+
             del self.connection
             orphans = gc.collect()
-            self.failIf(orphans, "%d orphaned objects found after deleting connection" % orphans)
-            
+            self.assertFalse(orphans, "%d orphaned objects found after deleting connection" % orphans)
+
     def table_exists(self, name):
         try:
             self.cursor.execute('select * from %s where 1=0' % name)
@@ -53,7 +53,7 @@ class DatabaseTest(unittest.TestCase):
 
     def quote_identifier(self, ident):
         return '"%s"' % ident
-    
+
     def new_table_name(self):
         i = id(self.cursor)
         while True:
@@ -66,14 +66,14 @@ class DatabaseTest(unittest.TestCase):
 
         """ Create a table using a list of column definitions given in
             columndefs.
-        
+
             generator must be a function taking arguments (row_number,
             col_number) returning a suitable data object for insertion
             into the table.
 
         """
         self.table = self.new_table_name()
-        self.cursor.execute('CREATE TABLE %s (%s) %s' % 
+        self.cursor.execute('CREATE TABLE %s (%s) %s' %
                             (self.table,
                              ',\n'.join(columndefs),
                              self.create_table_extra))
@@ -81,9 +81,9 @@ class DatabaseTest(unittest.TestCase):
     def check_data_integrity(self, columndefs, generator):
         # insert
         self.create_table(columndefs)
-        insert_statement = ('INSERT INTO %s VALUES (%s)' % 
+        insert_statement = ('INSERT INTO %s VALUES (%s)' %
                             (self.table,
-                             ','.join(['%s'] * len(columndefs))))
+                             ','.join(['{!s}'] * len(columndefs))))
         data = [ [ generator(i,j) for j in range(len(columndefs)) ]
                  for i in range(self.rows) ]
         self.cursor.executemany(insert_statement, data)
@@ -91,11 +91,11 @@ class DatabaseTest(unittest.TestCase):
         # verify
         self.cursor.execute('select * from %s' % self.table)
         l = self.cursor.fetchall()
-        self.assertEquals(len(l), self.rows)
+        self.assertEqual(len(l), self.rows)
         try:
             for i in range(self.rows):
                 for j in range(len(columndefs)):
-                    self.assertEquals(l[i][j], generator(i,j))
+                    self.assertEqual(l[i][j], generator(i,j))
         finally:
             if not self.debug:
                 self.cursor.execute('drop table %s' % (self.table))
@@ -106,9 +106,9 @@ class DatabaseTest(unittest.TestCase):
             if col == 0: return row
             else: return ('%i' % (row%10))*255
         self.create_table(columndefs)
-        insert_statement = ('INSERT INTO %s VALUES (%s)' % 
+        insert_statement = ('INSERT INTO %s VALUES (%s)' %
                             (self.table,
-                             ','.join(['%s'] * len(columndefs))))
+                             ','.join(['{!s}'] * len(columndefs))))
         data = [ [ generator(i,j) for j in range(len(columndefs)) ]
                  for i in range(self.rows) ]
         self.cursor.executemany(insert_statement, data)
@@ -116,11 +116,11 @@ class DatabaseTest(unittest.TestCase):
         self.connection.commit()
         self.cursor.execute('select * from %s' % self.table)
         l = self.cursor.fetchall()
-        self.assertEquals(len(l), self.rows)
+        self.assertEqual(len(l), self.rows)
         for i in range(self.rows):
             for j in range(len(columndefs)):
-                self.assertEquals(l[i][j], generator(i,j))
-        delete_statement = 'delete from %s where col1=%%s' % self.table
+                self.assertEqual(l[i][j], generator(i,j))
+        delete_statement = 'delete from %s where col1={!s}' % self.table
         self.cursor.execute(delete_statement, (0,))
         self.cursor.execute('select col1 from %s where col1=%s' % \
                             (self.table, 0))
@@ -137,11 +137,11 @@ class DatabaseTest(unittest.TestCase):
         columndefs = ( 'col1 INT', 'col2 VARCHAR(255)')
         def generator(row, col):
             if col == 0: return row
-            else: return ('%i' % (row%10))*((255-self.rows/2)+row)
+            else: return ('{:d}'.format(row%10))*(round(255-self.rows/2)+row)
         self.create_table(columndefs)
-        insert_statement = ('INSERT INTO %s VALUES (%s)' % 
+        insert_statement = ('INSERT INTO %s VALUES (%s)' %
                             (self.table,
-                             ','.join(['%s'] * len(columndefs))))
+                             ','.join(['{!s}'] * len(columndefs))))
 
         try:
             self.cursor.execute(insert_statement, (0, '0'*256))
@@ -151,7 +151,7 @@ class DatabaseTest(unittest.TestCase):
             self.fail("Over-long column did not generate warnings/exception with single insert")
 
         self.connection.rollback()
-        
+
         try:
             for i in range(self.rows):
                 data = []
@@ -164,7 +164,7 @@ class DatabaseTest(unittest.TestCase):
             self.fail("Over-long columns did not generate warnings/exception with execute()")
 
         self.connection.rollback()
-        
+
         try:
             data = [ [ generator(i,j) for j in range(len(columndefs)) ]
                      for i in range(self.rows) ]
